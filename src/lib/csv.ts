@@ -24,7 +24,7 @@ export function parseCsvLine(line: string): string[] {
 }
 
 export function parseCsv(text: string): { headers: string[]; rows: string[][] } {
-  const lines = text.trim().split('\n')
+  const lines = text.trim().split(/\r?\n/)
   if (lines.length === 0 || (lines.length === 1 && lines[0] === '')) {
     return { headers: [], rows: [] }
   }

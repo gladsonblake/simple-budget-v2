@@ -33,6 +33,13 @@ describe('parseCsv', () => {
     expect(parseCsv(csv).rows).toHaveLength(2)
   })
 
+  it('handles Windows CRLF line endings', () => {
+    const csv = 'Date,Name,Amount\r\n01/01/2025,Netflix,-15.99\r\n01/02/2025,Walmart,-42.00'
+    const result = parseCsv(csv)
+    expect(result.headers).toEqual(['Date', 'Name', 'Amount'])
+    expect(result.rows[0]).toEqual(['01/01/2025', 'Netflix', '-15.99'])
+  })
+
   it('returns empty arrays for empty input', () => {
     expect(parseCsv('')).toEqual({ headers: [], rows: [] })
   })

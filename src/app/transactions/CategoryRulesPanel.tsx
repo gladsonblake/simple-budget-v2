@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { saveCategoryRules } from '@/lib/db'
 import type { CategoryRule } from '@/lib/types'
 
@@ -14,6 +14,10 @@ export default function CategoryRulesPanel({ rules, onChange }: Props) {
   const [drafts, setDrafts] = useState<DraftRule[]>(
     rules.map(r => ({ pattern: r.pattern, category: r.category, priority: r.priority }))
   )
+
+  useEffect(() => {
+    setDrafts(rules.map(r => ({ pattern: r.pattern, category: r.category, priority: r.priority })))
+  }, [rules])
 
   function addRule() {
     setDrafts(d => [...d, { pattern: '', category: '', priority: d.length }])

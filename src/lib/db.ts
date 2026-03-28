@@ -84,7 +84,15 @@ export async function saveProfile(
 
 export async function deleteProfile(id: number): Promise<void> {
   const db = await getDb()
-  await db.execute('DELETE FROM profiles WHERE id = $1', [id])
+  await db.execute('BEGIN')
+  try {
+    await db.execute('DELETE FROM transactions WHERE profile_id = $1', [id])
+    await db.execute('DELETE FROM profiles WHERE id = $1', [id])
+    await db.execute('COMMIT')
+  } catch (e) {
+    await db.execute('ROLLBACK')
+    throw e
+  }
 }
 
 export async function getCategoryRules(): Promise<CategoryRule[]> {
