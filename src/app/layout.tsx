@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import Link from "next/link";
+import AppInit from "./AppInit";
 import "./globals.css";
 
 const geist = Geist({
@@ -27,6 +28,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geist.variable} h-full`}>
       <body className="h-full flex antialiased bg-gray-50 text-gray-900">
+        <AppInit />
         <aside className="w-52 shrink-0 bg-white border-r border-gray-200 flex flex-col">
           <div className="px-5 py-5 border-b border-gray-200">
             <span className="text-base font-semibold tracking-tight text-gray-900">

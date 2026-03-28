@@ -15,3 +15,12 @@ vi.mock('next/navigation', () => ({
   redirect: vi.fn(),
   notFound: vi.fn(),
 }))
+
+vi.mock('@tauri-apps/plugin-sql', () => ({
+  default: {
+    load: vi.fn().mockResolvedValue({
+      execute: vi.fn().mockResolvedValue({ lastInsertId: 1, rowsAffected: 1 }),
+      select: vi.fn().mockResolvedValue([]),
+    }),
+  },
+}))
