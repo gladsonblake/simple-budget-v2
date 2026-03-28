@@ -79,7 +79,7 @@ export async function saveProfile(
       new Date().toISOString(),
     ]
   )
-  return result.lastInsertId
+  return result.lastInsertId ?? 0
 }
 
 export async function deleteProfile(id: number): Promise<void> {
