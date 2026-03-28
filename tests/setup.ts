@@ -1,5 +1,10 @@
 import '@testing-library/jest-dom/vitest'
-import { vi } from 'vitest'
+import { vi, afterEach } from 'vitest'
+import { cleanup } from '@testing-library/react'
+
+afterEach(() => {
+  cleanup()
+})
 
 vi.mock('next/navigation', () => ({
   useRouter: () => ({
@@ -14,4 +19,13 @@ vi.mock('next/navigation', () => ({
   useSearchParams: () => new URLSearchParams(),
   redirect: vi.fn(),
   notFound: vi.fn(),
+}))
+
+vi.mock('@tauri-apps/plugin-sql', () => ({
+  default: {
+    load: vi.fn().mockResolvedValue({
+      execute: vi.fn().mockResolvedValue({ lastInsertId: 1, rowsAffected: 1 }),
+      select: vi.fn().mockResolvedValue([]),
+    }),
+  },
 }))
