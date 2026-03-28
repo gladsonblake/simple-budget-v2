@@ -43,7 +43,7 @@ playwright.config.ts
 
 **File:** `tests/setup.ts`
 
-- Imports `@testing-library/jest-dom` to extend Vitest's `expect` with DOM matchers
+- Imports `@testing-library/jest-dom/vitest` to extend Vitest's `expect` with DOM matchers
 - Mocks `next/navigation` (provides stub implementations of `useRouter`, `usePathname`, `redirect`, etc.) since these are not available in jsdom
 
 **File:** `tests/utils.tsx`

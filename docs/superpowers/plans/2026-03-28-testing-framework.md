@@ -94,7 +94,7 @@ git commit -m "feat: add vitest config"
 - [ ] **Step 1: Create the file**
 
 ```ts
-import '@testing-library/jest-dom'
+import '@testing-library/jest-dom/vitest'
 import { vi } from 'vitest'
 
 vi.mock('next/navigation', () => ({
@@ -316,7 +316,9 @@ const routes = ['/dashboard', '/transactions', '/categories', '/import']
 for (const route of routes) {
   test(`${route} loads`, async ({ page }) => {
     const response = await page.goto(route)
+    expect(response).not.toBeNull()
     expect(response?.status()).toBe(200)
+    await expect(page.locator('h1')).toBeVisible()
   })
 }
 ```

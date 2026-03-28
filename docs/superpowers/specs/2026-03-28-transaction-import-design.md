@@ -38,7 +38,7 @@ Build the transaction import feature for Simple Budget v2 (Tauri 2 + Next.js 16 
 | `id` | integer PK autoincrement | |
 | `date` | text | ISO date, normalized on import |
 | `description` | text | From mapped `description` column (e.g. CSV `Name`) |
-| `amount` | real | Normalized: positive = expense, negative = credit |
+| `amount` | real | Normalized: positive = expense, negative = credit. If sign_convention is `"negative_expense"`, the CSV value is negated on import. If `"positive_expense"`, stored as-is. |
 | `transaction_type` | text nullable | From mapped `transaction_type` column (e.g. "debit"/"credit") |
 | `memo` | text nullable | From mapped `memo` column |
 | `category` | text nullable | From mapped `category` column — only populated if the CSV has one (e.g. Capital One) |
