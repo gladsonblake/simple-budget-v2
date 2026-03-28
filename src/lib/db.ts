@@ -84,15 +84,8 @@ export async function saveProfile(
 
 export async function deleteProfile(id: number): Promise<void> {
   const db = await getDb()
-  await db.execute('BEGIN')
-  try {
-    await db.execute('DELETE FROM transactions WHERE profile_id = $1', [id])
-    await db.execute('DELETE FROM profiles WHERE id = $1', [id])
-    await db.execute('COMMIT')
-  } catch (e) {
-    await db.execute('ROLLBACK')
-    throw e
-  }
+  await db.execute('DELETE FROM transactions WHERE profile_id = $1', [id])
+  await db.execute('DELETE FROM profiles WHERE id = $1', [id])
 }
 
 export async function getCategoryRules(): Promise<CategoryRule[]> {
@@ -106,19 +99,12 @@ export async function saveCategoryRules(
   rules: Omit<CategoryRule, 'id'>[]
 ): Promise<void> {
   const db = await getDb()
-  await db.execute('BEGIN')
-  try {
-    await db.execute('DELETE FROM category_rules')
-    for (const rule of rules) {
-      await db.execute(
-        'INSERT INTO category_rules (pattern, category, priority) VALUES ($1, $2, $3)',
-        [rule.pattern, rule.category, rule.priority]
-      )
-    }
-    await db.execute('COMMIT')
-  } catch (e) {
-    await db.execute('ROLLBACK')
-    throw e
+  await db.execute('DELETE FROM category_rules')
+  for (const rule of rules) {
+    await db.execute(
+      'INSERT INTO category_rules (pattern, category, priority) VALUES ($1, $2, $3)',
+      [rule.pattern, rule.category, rule.priority]
+    )
   }
 }
 
@@ -138,25 +124,18 @@ export async function insertTransactions(
 ): Promise<void> {
   const db = await getDb()
   const now = new Date().toISOString()
-  await db.execute('BEGIN')
-  try {
-    for (const row of rows) {
-      await db.execute(
-        `INSERT INTO transactions
-          (date, description, amount, transaction_type, memo, category, notes, extra_data, imported_at, profile_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-        [
-          row.date, row.description, row.amount,
-          row.transaction_type ?? null, row.memo ?? null,
-          row.category ?? null, row.notes ?? null,
-          row.extra_data ? JSON.stringify(row.extra_data) : null,
-          now, row.profile_id,
-        ]
-      )
-    }
-    await db.execute('COMMIT')
-  } catch (e) {
-    await db.execute('ROLLBACK')
-    throw e
+  for (const row of rows) {
+    await db.execute(
+      `INSERT INTO transactions
+        (date, description, amount, transaction_type, memo, category, notes, extra_data, imported_at, profile_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+      [
+        row.date, row.description, row.amount,
+        row.transaction_type ?? null, row.memo ?? null,
+        row.category ?? null, row.notes ?? null,
+        row.extra_data ? JSON.stringify(row.extra_data) : null,
+        now, row.profile_id,
+      ]
+    )
   }
 }
