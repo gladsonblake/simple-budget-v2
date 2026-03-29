@@ -74,6 +74,27 @@ describe('CategorySelect', () => {
     })
   })
 
+  it('shows an error message when onAddCategory rejects', async () => {
+    onAddCategory.mockRejectedValue(new Error('UNIQUE constraint failed'))
+    render(
+      <CategorySelect
+        value=""
+        categories={categories}
+        onChange={onChange}
+        onAddCategory={onAddCategory}
+      />
+    )
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: '__add_new__' } })
+    fireEvent.change(screen.getByPlaceholderText(/new category name/i), {
+      target: { value: 'Entertainment' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /^add$/i }))
+    await waitFor(() => {
+      expect(screen.getByText('Failed to add category')).toBeInTheDocument()
+    })
+    expect(onChange).not.toHaveBeenCalled()
+  })
+
   it('returns to the select when the cancel button is clicked during inline add', () => {
     render(
       <CategorySelect
