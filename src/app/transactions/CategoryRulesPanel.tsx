@@ -20,6 +20,8 @@ export default function CategoryRulesPanel({ rules, categories, onChange, onAddC
   const [renameId, setRenameId] = useState<number | null>(null)
   const [renameName, setRenameName] = useState('')
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const [renameError, setRenameError] = useState<string | null>(null)
 
   useEffect(() => {
     setDrafts(rules.map(r => ({ pattern: r.pattern, category: r.category, priority: r.priority })))
@@ -42,26 +44,40 @@ export default function CategoryRulesPanel({ rules, categories, onChange, onAddC
   }
 
   async function handleSave() {
-    const valid = drafts.filter(r => r.pattern.trim() && r.category.trim())
-    await saveCategoryRules(valid)
-    onChange()
+    setSaveError(null)
+    try {
+      const valid = drafts.filter(r => r.pattern.trim() && r.category.trim())
+      await saveCategoryRules(valid)
+      onChange()
+    } catch {
+      setSaveError('Failed to save rules')
+    }
   }
 
   async function handleRenameConfirm(id: number) {
     const trimmed = renameName.trim()
     if (!trimmed) return
-    await renameCategory(id, trimmed)
-    setRenameId(null)
-    onChange()
+    setRenameError(null)
+    try {
+      await renameCategory(id, trimmed)
+      setRenameId(null)
+      onChange()
+    } catch {
+      setRenameError('Failed to rename category')
+    }
   }
 
   async function handleDelete(id: number) {
     setDeleteError(null)
-    const result = await deleteCategory(id)
-    if (result.error) {
-      setDeleteError(result.error)
-    } else {
-      onChange()
+    try {
+      const result = await deleteCategory(id)
+      if (result.error) {
+        setDeleteError(result.error)
+      } else {
+        onChange()
+      }
+    } catch {
+      setDeleteError('Failed to delete category')
     }
   }
 
@@ -111,6 +127,7 @@ export default function CategoryRulesPanel({ rules, categories, onChange, onAddC
         >
           Save Rules
         </button>
+        {saveError && <p className="text-xs text-red-500 mt-1">{saveError}</p>}
       </div>
 
       {/* Categories management section */}
@@ -148,6 +165,7 @@ export default function CategoryRulesPanel({ rules, categories, onChange, onAddC
                   >
                     ✕
                   </button>
+                  {renameError && <p className="text-xs text-red-500 mt-1">{renameError}</p>}
                 </>
               ) : (
                 <>
