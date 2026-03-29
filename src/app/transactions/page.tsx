@@ -1,22 +1,34 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getTransactions, getCategoryRules } from '@/lib/db'
+import { getTransactions, getCategoryRules, getCategories, addCategory } from '@/lib/db'
 import { effectiveCategory } from '@/lib/rules'
-import type { Transaction, CategoryRule } from '@/lib/types'
+import type { Transaction, CategoryRule, Category } from '@/lib/types'
 import CategoryRulesPanel from './CategoryRulesPanel'
 
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [rules, setRules] = useState<CategoryRule[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [showRules, setShowRules] = useState(false)
 
   async function load() {
-    const [txns, rls] = await Promise.all([getTransactions(), getCategoryRules()])
+    const [txns, rls, cats] = await Promise.all([
+      getTransactions(),
+      getCategoryRules(),
+      getCategories(),
+    ])
     setTransactions(txns)
     setRules(rls)
+    setCategories(cats)
   }
 
   useEffect(() => { load() }, [])
+
+  async function handleAddCategory(name: string) {
+    const cat = await addCategory(name)
+    await load()
+    return cat
+  }
 
   return (
     <div className="p-8">
@@ -32,7 +44,12 @@ export default function TransactionsPage() {
 
       {showRules && (
         <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200 max-w-xl">
-          <CategoryRulesPanel rules={rules} onChange={load} />
+          <CategoryRulesPanel
+            rules={rules}
+            categories={categories}
+            onChange={load}
+            onAddCategory={handleAddCategory}
+          />
         </div>
       )}
 
