@@ -93,7 +93,7 @@ describe('deleteCategory', () => {
       .mockResolvedValueOnce([{ name: 'Transport' }])
       .mockResolvedValueOnce([{ id: 1 }]) // 1 referencing rule
     const result = await deleteCategory(3)
-    expect(result).toEqual({ error: '1 rule use this category' })
+    expect(result).toEqual({ error: '1 rule uses this category' })
   })
 
   it('returns empty object when category does not exist', async () => {

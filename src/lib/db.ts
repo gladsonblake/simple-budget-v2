@@ -187,7 +187,7 @@ export async function deleteCategory(id: number): Promise<{ error?: string }> {
     [rows[0].name]
   )
   if (refs.length > 0) {
-    return { error: `${refs.length} rule${refs.length !== 1 ? 's' : ''} use this category` }
+    return { error: `${refs.length} rule${refs.length !== 1 ? 's' : ''} use${refs.length === 1 ? 's' : ''} this category` }
   }
   await db.execute('DELETE FROM categories WHERE id = $1', [id])
   return {}
