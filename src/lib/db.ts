@@ -1,7 +1,11 @@
 import Database from '@tauri-apps/plugin-sql'
-import type { Profile, Transaction, CategoryRule } from './types'
+import type { Profile, Transaction, CategoryRule, Category } from './types'
 
 let _db: Database | null = null
+
+export function _resetDbForTesting() {
+  _db = null
+}
 
 async function getDb(): Promise<Database> {
   if (!_db) {
@@ -44,6 +48,12 @@ export async function initDb(): Promise<void> {
       pattern TEXT NOT NULL,
       category TEXT NOT NULL,
       priority INTEGER NOT NULL DEFAULT 0
+    )
+  `)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS categories (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE
     )
   `)
 }
@@ -138,4 +148,47 @@ export async function insertTransactions(
       ]
     )
   }
+}
+
+export async function getCategories(): Promise<Category[]> {
+  const db = await getDb()
+  return db.select<Category[]>('SELECT * FROM categories ORDER BY name ASC')
+}
+
+export async function addCategory(name: string): Promise<Category> {
+  const db = await getDb()
+  const result = await db.execute('INSERT INTO categories (name) VALUES ($1)', [name])
+  return { id: result.lastInsertId ?? 0, name }
+}
+
+export async function renameCategory(id: number, name: string): Promise<void> {
+  const db = await getDb()
+  const old = await db.select<Array<{ name: string }>>(
+    'SELECT name FROM categories WHERE id = $1',
+    [id]
+  )
+  if (old.length === 0) return
+  await db.execute('UPDATE categories SET name = $1 WHERE id = $2', [name, id])
+  await db.execute(
+    'UPDATE category_rules SET category = $1 WHERE category = $2',
+    [name, old[0].name]
+  )
+}
+
+export async function deleteCategory(id: number): Promise<{ error?: string }> {
+  const db = await getDb()
+  const rows = await db.select<Array<{ name: string }>>(
+    'SELECT name FROM categories WHERE id = $1',
+    [id]
+  )
+  if (rows.length === 0) return {}
+  const refs = await db.select<Array<{ id: number }>>(
+    'SELECT id FROM category_rules WHERE category = $1',
+    [rows[0].name]
+  )
+  if (refs.length > 0) {
+    return { error: `${refs.length} rule${refs.length !== 1 ? 's' : ''} use this category` }
+  }
+  await db.execute('DELETE FROM categories WHERE id = $1', [id])
+  return {}
 }

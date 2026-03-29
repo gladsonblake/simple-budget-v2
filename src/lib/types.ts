@@ -7,6 +7,11 @@ export interface ColumnMap {
   category?: string
 }
 
+export interface Category {
+  id: number
+  name: string
+}
+
 export interface Profile {
   id: number
   name: string
