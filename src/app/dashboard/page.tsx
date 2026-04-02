@@ -26,6 +26,7 @@ export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [rules, setRules] = useState<CategoryRule[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedMonth, setSelectedMonth] = useState<string>('all')
 
   useEffect(() => {
     async function load() {
@@ -38,8 +39,17 @@ export default function DashboardPage() {
   }, [])
 
   const stats: DashboardStats = getSummaryStats(transactions)
-  const categoryTotals: CategoryTotal[] = getCategoryTotals(transactions, rules).slice(0, 10)
   const monthlyTotals: MonthlyTotal[] = getMonthlyTotals(transactions).slice(-12)
+
+  const availableMonths: string[] = Array.from(
+    new Set(transactions.map(t => t.date.slice(0, 7)))
+  ).sort()
+
+  const filteredForCategory = selectedMonth === 'all'
+    ? transactions
+    : transactions.filter(t => t.date.startsWith(selectedMonth))
+
+  const categoryTotals: CategoryTotal[] = getCategoryTotals(filteredForCategory, rules).slice(0, 10)
 
   return (
     <div className="p-8">
@@ -65,7 +75,20 @@ export default function DashboardPage() {
 
           {/* Spending by Category */}
           <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <h2 className="text-sm font-semibold text-gray-700 mb-4">Spending by Category</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-sm font-semibold text-gray-700">Spending by Category</h2>
+              <select
+                value={selectedMonth}
+                onChange={e => setSelectedMonth(e.target.value)}
+                className="text-xs border border-gray-200 rounded px-2 py-1 text-gray-600 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                aria-label="Select month"
+              >
+                <option value="all">All months</option>
+                {availableMonths.map(m => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </div>
             <ResponsiveContainer width="100%" height={Math.max(200, categoryTotals.length * 36)}>
               <BarChart
                 data={categoryTotals}
