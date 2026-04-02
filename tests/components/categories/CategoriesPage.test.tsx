@@ -76,6 +76,19 @@ describe('CategoriesPage', () => {
     await waitFor(() => expect(renameCategory).toHaveBeenCalledWith(1, 'Fun'))
   })
 
+  it('hides the rename input after a successful rename', async () => {
+    render(<CategoriesPage />)
+    await screen.findByText('Entertainment')
+    fireEvent.click(screen.getByRole('button', { name: /rename entertainment/i }))
+    fireEvent.change(screen.getByLabelText(/rename category/i), {
+      target: { value: 'Fun' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: /^save$/i }))
+    await waitFor(() => {
+      expect(screen.queryByLabelText(/rename category/i)).not.toBeInTheDocument()
+    })
+  })
+
   it('cancels rename and restores the list item when ✕ is clicked', async () => {
     render(<CategoriesPage />)
     await screen.findByText('Entertainment')
