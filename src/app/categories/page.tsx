@@ -22,6 +22,7 @@ export default function CategoriesPage() {
     const trimmed = newName.trim()
     if (!trimmed) return
     setAddError(null)
+    setDeleteError(null)
     try {
       await addCategory(trimmed)
       setNewName('')
@@ -83,7 +84,7 @@ export default function CategoriesPage() {
 
       {deleteError && <p className="text-xs text-red-600 mb-2 mt-4">{deleteError}</p>}
 
-      {categories.length === 0 && !addError && (
+      {categories.length === 0 && (
         <p className="text-sm text-gray-400 mt-4">No categories yet. Add one above.</p>
       )}
 
