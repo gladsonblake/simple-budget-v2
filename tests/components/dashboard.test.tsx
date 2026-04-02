@@ -28,7 +28,7 @@ function makeTx(overrides: Partial<Transaction> = {}): Transaction {
     id: 1,
     date: '2025-01-15',
     description: 'Test',
-    amount: -50,
+    amount: 50,
     transaction_type: null,
     memo: null,
     category: 'Food',
@@ -67,8 +67,8 @@ describe('DashboardPage', () => {
 
   it('displays total expenses in summary', async () => {
     vi.mocked(getTransactions).mockResolvedValue([
-      makeTx({ id: 1, amount: -50 }),
-      makeTx({ id: 2, amount: -30 }),
+      makeTx({ id: 1, amount: 50 }),
+      makeTx({ id: 2, amount: 30 }),
     ])
     render(<DashboardPage />)
     await waitFor(() => {
@@ -78,8 +78,8 @@ describe('DashboardPage', () => {
 
   it('displays total income in summary', async () => {
     vi.mocked(getTransactions).mockResolvedValue([
-      makeTx({ id: 1, amount: 2000, category: 'Income' }),
-      makeTx({ id: 2, amount: -300, category: 'Food' }),
+      makeTx({ id: 1, amount: -2000, category: 'Income' }),
+      makeTx({ id: 2, amount: 300, category: 'Food' }),
     ])
     render(<DashboardPage />)
     await waitFor(() => {
@@ -89,8 +89,8 @@ describe('DashboardPage', () => {
 
   it('displays net balance in summary', async () => {
     vi.mocked(getTransactions).mockResolvedValue([
-      makeTx({ id: 1, amount: 1000, category: 'Salary' }),
-      makeTx({ id: 2, amount: -400 }),
+      makeTx({ id: 1, amount: -1000, category: 'Salary' }),
+      makeTx({ id: 2, amount: 400 }),
     ])
     render(<DashboardPage />)
     await waitFor(() => {

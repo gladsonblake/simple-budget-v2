@@ -27,9 +27,9 @@ export function getCategoryTotals(
 ): CategoryTotal[] {
   const map: Record<string, number> = {}
   for (const t of transactions) {
-    if (t.amount >= 0) continue
+    if (t.amount <= 0) continue
     const cat = effectiveCategory(t.category, t.description, rules) ?? 'Uncategorized'
-    map[cat] = (map[cat] ?? 0) + Math.abs(t.amount)
+    map[cat] = (map[cat] ?? 0) + t.amount
   }
   return Object.entries(map)
     .map(([category, total]) => ({ category, total }))
@@ -42,10 +42,10 @@ export function getMonthlyTotals(transactions: Transaction[]): MonthlyTotal[] {
     const [year, month] = t.date.split('-')
     const key = `${year}-${month}`
     if (!map[key]) map[key] = { expenses: 0, income: 0 }
-    if (t.amount < 0) {
-      map[key].expenses += Math.abs(t.amount)
+    if (t.amount > 0) {
+      map[key].expenses += t.amount
     } else {
-      map[key].income += t.amount
+      map[key].income += Math.abs(t.amount)
     }
   }
   return Object.entries(map)
@@ -61,8 +61,8 @@ export function getSummaryStats(transactions: Transaction[]): DashboardStats {
   let totalExpenses = 0
   let totalIncome = 0
   for (const t of transactions) {
-    if (t.amount < 0) totalExpenses += Math.abs(t.amount)
-    else totalIncome += t.amount
+    if (t.amount > 0) totalExpenses += t.amount
+    else totalIncome += Math.abs(t.amount)
   }
   return {
     totalExpenses,
