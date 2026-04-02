@@ -1,6 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getTransactions, getCategoryRules, getCategories, addCategory } from '@/lib/db'
+import { getTransactions, getCategoryRules, getCategories } from '@/lib/db'
 import { effectiveCategory } from '@/lib/rules'
 import type { Transaction, CategoryRule, Category } from '@/lib/types'
 import CategoryRulesPanel from './CategoryRulesPanel'
@@ -24,12 +24,6 @@ export default function TransactionsPage() {
 
   useEffect(() => { load() }, [])
 
-  async function handleAddCategory(name: string) {
-    const cat = await addCategory(name)
-    await load()
-    return cat
-  }
-
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
@@ -48,7 +42,6 @@ export default function TransactionsPage() {
             rules={rules}
             categories={categories}
             onChange={load}
-            onAddCategory={handleAddCategory}
           />
         </div>
       )}
