@@ -150,6 +150,14 @@ export async function insertTransactions(
   }
 }
 
+export async function updateTransactionCategory(
+  id: number,
+  category: string | null
+): Promise<void> {
+  const db = await getDb()
+  await db.execute('UPDATE transactions SET category = $1 WHERE id = $2', [category, id])
+}
+
 export async function getCategories(): Promise<Category[]> {
   const db = await getDb()
   return db.select<Category[]>('SELECT * FROM categories ORDER BY name ASC')
