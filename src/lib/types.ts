@@ -53,6 +53,15 @@ export interface ParsedRow {
   extra_data: Record<string, string> | null
 }
 
+export interface RecurringExpense {
+  id: number
+  name: string
+  amount: number
+  category: string
+  frequency: 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly'
+  created_at: string
+}
+
 export interface MappingError {
   row: number
   message: string

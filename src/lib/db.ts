@@ -1,5 +1,5 @@
 import Database from '@tauri-apps/plugin-sql'
-import type { Profile, Transaction, CategoryRule, Category } from './types'
+import type { Profile, Transaction, CategoryRule, Category, RecurringExpense } from './types'
 
 let _db: Database | null = null
 
@@ -54,6 +54,16 @@ export async function initDb(): Promise<void> {
     CREATE TABLE IF NOT EXISTS categories (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL UNIQUE
+    )
+  `)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS recurring_expenses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      amount REAL NOT NULL,
+      category TEXT NOT NULL,
+      frequency TEXT NOT NULL,
+      created_at TEXT NOT NULL
     )
   `)
 }
@@ -181,6 +191,42 @@ export async function renameCategory(id: number, name: string): Promise<void> {
     'UPDATE category_rules SET category = $1 WHERE category = $2',
     [name, old[0].name]
   )
+}
+
+export async function getRecurringExpenses(): Promise<RecurringExpense[]> {
+  const db = await getDb()
+  return db.select<RecurringExpense[]>(
+    'SELECT * FROM recurring_expenses ORDER BY name ASC'
+  )
+}
+
+export async function addRecurringExpense(
+  expense: Omit<RecurringExpense, 'id' | 'created_at'>
+): Promise<RecurringExpense> {
+  const db = await getDb()
+  const now = new Date().toISOString()
+  const result = await db.execute(
+    `INSERT INTO recurring_expenses (name, amount, category, frequency, created_at)
+     VALUES ($1, $2, $3, $4, $5)`,
+    [expense.name, expense.amount, expense.category, expense.frequency, now]
+  )
+  return { id: result.lastInsertId ?? 0, ...expense, created_at: now }
+}
+
+export async function updateRecurringExpense(
+  id: number,
+  expense: Omit<RecurringExpense, 'id' | 'created_at'>
+): Promise<void> {
+  const db = await getDb()
+  await db.execute(
+    `UPDATE recurring_expenses SET name = $1, amount = $2, category = $3, frequency = $4 WHERE id = $5`,
+    [expense.name, expense.amount, expense.category, expense.frequency, id]
+  )
+}
+
+export async function deleteRecurringExpense(id: number): Promise<void> {
+  const db = await getDb()
+  await db.execute('DELETE FROM recurring_expenses WHERE id = $1', [id])
 }
 
 export async function deleteCategory(id: number): Promise<{ error?: string }> {
