@@ -18,6 +18,7 @@ const navItems = [
   { href: "/import", label: "Import" },
   { href: "/transactions", label: "Transactions" },
   { href: "/categories", label: "Categories" },
+  { href: "/recurring", label: "Recurring" },
 ];
 
 export default function RootLayout({
