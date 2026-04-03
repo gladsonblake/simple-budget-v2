@@ -4,9 +4,9 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
   ResponsiveContainer,
 } from 'recharts'
-import { getTransactions, getCategoryRules } from '@/lib/db'
-import { getCategoryTotals, getMonthlyTotals, getSummaryStats } from '@/lib/dashboard'
-import type { Transaction, CategoryRule } from '@/lib/types'
+import { getTransactions, getCategoryRules, getRecurringExpenses } from '@/lib/db'
+import { getCategoryTotals, getMonthlyTotals, getSummaryStats, generateRecurringTransactions } from '@/lib/dashboard'
+import type { Transaction, CategoryRule, RecurringExpense } from '@/lib/types'
 import type { DashboardStats, CategoryTotal, MonthlyTotal } from '@/lib/dashboard'
 
 const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
@@ -25,39 +25,68 @@ function StatCard({ label, value, highlight }: { label: string; value: string; h
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [rules, setRules] = useState<CategoryRule[]>([])
+  const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedMonth, setSelectedMonth] = useState<string>('all')
+  const [includeRecurring, setIncludeRecurring] = useState(true)
 
   useEffect(() => {
     async function load() {
-      const [txns, rls] = await Promise.all([getTransactions(), getCategoryRules()])
+      const [txns, rls, recurring] = await Promise.all([
+        getTransactions(),
+        getCategoryRules(),
+        getRecurringExpenses(),
+      ])
       setTransactions(txns)
       setRules(rls)
+      setRecurringExpenses(recurring)
       setLoading(false)
     }
     load()
   }, [])
 
-  const monthlyTotals: MonthlyTotal[] = getMonthlyTotals(transactions).slice(-12)
+  const today = new Date()
+  const currentDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+  const recurringTxns = includeRecurring
+    ? generateRecurringTransactions(recurringExpenses, currentDate)
+    : []
+
+  const allTransactions = [...transactions, ...recurringTxns]
+
+  const monthlyTotals: MonthlyTotal[] = getMonthlyTotals(allTransactions).slice(-12)
 
   const availableMonths: string[] = Array.from(
-    new Set(transactions.map(t => t.date.slice(0, 7)))
+    new Set(allTransactions.map(t => t.date.slice(0, 7)))
   ).sort()
 
   const filtered = selectedMonth === 'all'
-    ? transactions
-    : transactions.filter(t => t.date.startsWith(selectedMonth))
+    ? allTransactions
+    : allTransactions.filter(t => t.date.startsWith(selectedMonth))
 
   const stats: DashboardStats = getSummaryStats(filtered)
   const categoryTotals: CategoryTotal[] = getCategoryTotals(filtered, rules).slice(0, 10)
 
   return (
     <div className="p-8">
-      <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
+        {recurringExpenses.length > 0 && (
+          <label className="flex items-center gap-2 text-sm text-gray-600">
+            <input
+              type="checkbox"
+              checked={includeRecurring}
+              onChange={e => setIncludeRecurring(e.target.checked)}
+              className="rounded border-gray-300"
+            />
+            Include recurring expenses
+          </label>
+        )}
+      </div>
 
       {loading ? (
         <p className="mt-4 text-sm text-gray-400">Loading...</p>
-      ) : transactions.length === 0 ? (
+      ) : allTransactions.length === 0 ? (
         <p className="mt-4 text-sm text-gray-400">No transactions yet. Import a CSV to get started.</p>
       ) : (
         <div className="mt-6 space-y-8">

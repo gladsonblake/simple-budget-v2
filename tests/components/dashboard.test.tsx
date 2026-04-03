@@ -19,9 +19,10 @@ vi.mock('recharts', () => ({
 vi.mock('@/lib/db', () => ({
   getTransactions: vi.fn(),
   getCategoryRules: vi.fn(),
+  getRecurringExpenses: vi.fn(),
 }))
 
-import { getTransactions, getCategoryRules } from '@/lib/db'
+import { getTransactions, getCategoryRules, getRecurringExpenses } from '@/lib/db'
 
 function makeTx(overrides: Partial<Transaction> = {}): Transaction {
   return {
@@ -43,6 +44,7 @@ function makeTx(overrides: Partial<Transaction> = {}): Transaction {
 describe('DashboardPage', () => {
   beforeEach(() => {
     vi.mocked(getCategoryRules).mockResolvedValue([])
+    vi.mocked(getRecurringExpenses).mockResolvedValue([])
   })
 
   it('renders the dashboard heading', () => {

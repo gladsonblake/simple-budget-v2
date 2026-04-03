@@ -1,4 +1,4 @@
-import type { Transaction, CategoryRule } from './types'
+import type { Transaction, CategoryRule, RecurringExpense } from './types'
 import { effectiveCategory } from './rules'
 
 export interface CategoryTotal {
@@ -70,4 +70,67 @@ export function getSummaryStats(transactions: Transaction[]): DashboardStats {
     net: totalIncome - totalExpenses,
     transactionCount: transactions.length,
   }
+}
+
+function addInterval(date: Date, frequency: RecurringExpense['frequency']): Date {
+  const next = new Date(date)
+  switch (frequency) {
+    case 'weekly':
+      next.setDate(next.getDate() + 7)
+      break
+    case 'biweekly':
+      next.setDate(next.getDate() + 14)
+      break
+    case 'monthly':
+      next.setMonth(next.getMonth() + 1)
+      break
+    case 'quarterly':
+      next.setMonth(next.getMonth() + 3)
+      break
+    case 'yearly':
+      next.setFullYear(next.getFullYear() + 1)
+      break
+  }
+  return next
+}
+
+function formatDate(d: Date): string {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+export function generateRecurringTransactions(
+  expenses: RecurringExpense[],
+  currentDate: string,
+): Transaction[] {
+  const transactions: Transaction[] = []
+  let id = -1
+
+  for (const expense of expenses) {
+    const endStr = expense.end_date ?? currentDate
+    const end = new Date(endStr + 'T00:00:00')
+    let cursor = new Date(expense.start_date + 'T00:00:00')
+
+    while (cursor <= end) {
+      const date = formatDate(cursor)
+      transactions.push({
+        id: id--,
+        date,
+        description: `[Recurring] ${expense.name}`,
+        amount: expense.amount,
+        transaction_type: null,
+        memo: null,
+        category: expense.category,
+        notes: null,
+        extra_data: null,
+        imported_at: '',
+        profile_id: 0,
+      })
+      cursor = addInterval(cursor, expense.frequency)
+    }
+  }
+
+  return transactions
 }

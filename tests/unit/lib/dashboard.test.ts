@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { getCategoryTotals, getMonthlyTotals, getSummaryStats } from '@/lib/dashboard'
-import type { Transaction, CategoryRule } from '@/lib/types'
+import { getCategoryTotals, getMonthlyTotals, getSummaryStats, generateRecurringTransactions } from '@/lib/dashboard'
+import type { Transaction, CategoryRule, RecurringExpense } from '@/lib/types'
 
 function tx(overrides: Partial<Transaction> = {}): Transaction {
   return {
@@ -135,5 +135,97 @@ describe('getSummaryStats', () => {
     expect(result.totalExpenses).toBe(150)
     expect(result.totalIncome).toBe(0)
     expect(result.net).toBe(-150)
+  })
+})
+
+function recurring(overrides: Partial<RecurringExpense> = {}): RecurringExpense {
+  return {
+    id: 1,
+    name: 'Netflix',
+    amount: 15,
+    category: 'Entertainment',
+    frequency: 'monthly',
+    start_date: '2025-01-01',
+    end_date: null,
+    created_at: '2025-01-01T00:00:00Z',
+    ...overrides,
+  }
+}
+
+describe('generateRecurringTransactions', () => {
+  it('returns empty array when no recurring expenses', () => {
+    expect(generateRecurringTransactions([], '2025-06-01')).toEqual([])
+  })
+
+  it('generates monthly occurrences from start to current date', () => {
+    const expenses = [recurring({ start_date: '2025-01-01', end_date: null })]
+    const result = generateRecurringTransactions(expenses, '2025-03-15')
+    expect(result).toHaveLength(3)
+    expect(result[0].date).toBe('2025-01-01')
+    expect(result[1].date).toBe('2025-02-01')
+    expect(result[2].date).toBe('2025-03-01')
+  })
+
+  it('stops at end_date when provided', () => {
+    const expenses = [recurring({ start_date: '2025-01-01', end_date: '2025-02-15' })]
+    const result = generateRecurringTransactions(expenses, '2025-12-31')
+    expect(result).toHaveLength(2)
+    expect(result[0].date).toBe('2025-01-01')
+    expect(result[1].date).toBe('2025-02-01')
+  })
+
+  it('generates weekly occurrences', () => {
+    const expenses = [recurring({ frequency: 'weekly', start_date: '2025-01-01', end_date: '2025-01-22' })]
+    const result = generateRecurringTransactions(expenses, '2025-12-31')
+    expect(result).toHaveLength(4)
+    expect(result.map(t => t.date)).toEqual([
+      '2025-01-01', '2025-01-08', '2025-01-15', '2025-01-22',
+    ])
+  })
+
+  it('generates biweekly occurrences', () => {
+    const expenses = [recurring({ frequency: 'biweekly', start_date: '2025-01-01', end_date: '2025-02-01' })]
+    const result = generateRecurringTransactions(expenses, '2025-12-31')
+    expect(result).toHaveLength(3)
+    expect(result.map(t => t.date)).toEqual([
+      '2025-01-01', '2025-01-15', '2025-01-29',
+    ])
+  })
+
+  it('generates quarterly occurrences', () => {
+    const expenses = [recurring({ frequency: 'quarterly', start_date: '2025-01-01', end_date: '2025-12-31' })]
+    const result = generateRecurringTransactions(expenses, '2025-12-31')
+    expect(result).toHaveLength(4)
+    expect(result.map(t => t.date)).toEqual([
+      '2025-01-01', '2025-04-01', '2025-07-01', '2025-10-01',
+    ])
+  })
+
+  it('generates yearly occurrences', () => {
+    const expenses = [recurring({ frequency: 'yearly', start_date: '2024-01-01', end_date: null })]
+    const result = generateRecurringTransactions(expenses, '2026-06-01')
+    expect(result).toHaveLength(3)
+    expect(result.map(t => t.date)).toEqual([
+      '2024-01-01', '2025-01-01', '2026-01-01',
+    ])
+  })
+
+  it('sets correct transaction properties', () => {
+    const expenses = [recurring({ name: 'Spotify', amount: 10, category: 'Music', start_date: '2025-03-01', end_date: '2025-03-01' })]
+    const result = generateRecurringTransactions(expenses, '2025-03-01')
+    expect(result).toHaveLength(1)
+    expect(result[0].description).toBe('[Recurring] Spotify')
+    expect(result[0].amount).toBe(10)
+    expect(result[0].category).toBe('Music')
+    expect(result[0].id).toBeLessThan(0)
+  })
+
+  it('handles multiple recurring expenses', () => {
+    const expenses = [
+      recurring({ id: 1, name: 'A', start_date: '2025-01-01', end_date: '2025-01-01' }),
+      recurring({ id: 2, name: 'B', start_date: '2025-01-01', end_date: '2025-01-01' }),
+    ]
+    const result = generateRecurringTransactions(expenses, '2025-01-01')
+    expect(result).toHaveLength(2)
   })
 })

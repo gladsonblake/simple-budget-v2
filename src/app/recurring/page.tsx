@@ -30,9 +30,20 @@ interface FormState {
   amount: string
   category: string
   frequency: RecurringExpense['frequency']
+  start_date: string
+  end_date: string
+  has_end_date: boolean
 }
 
-const emptyForm: FormState = { name: '', amount: '', category: '', frequency: 'monthly' }
+function todayStr(): string {
+  const d = new Date()
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+const emptyForm: FormState = { name: '', amount: '', category: '', frequency: 'monthly', start_date: todayStr(), end_date: '', has_end_date: false }
 
 export default function RecurringPage() {
   const [expenses, setExpenses] = useState<RecurringExpense[]>([])
@@ -54,6 +65,9 @@ export default function RecurringPage() {
     const amt = parseFloat(form.amount)
     if (isNaN(amt) || amt <= 0) return 'Amount must be a positive number'
     if (!form.category) return 'Category is required'
+    if (!form.start_date) return 'Start date is required'
+    if (form.has_end_date && !form.end_date) return 'End date is required when enabled'
+    if (form.has_end_date && form.end_date && form.end_date < form.start_date) return 'End date must be after start date'
     return null
   }
 
@@ -69,6 +83,8 @@ export default function RecurringPage() {
       amount: parseFloat(form.amount),
       category: form.category,
       frequency: form.frequency,
+      start_date: form.start_date,
+      end_date: form.has_end_date ? form.end_date : null,
     }
     try {
       if (editId !== null) {
@@ -91,6 +107,9 @@ export default function RecurringPage() {
       amount: String(expense.amount),
       category: expense.category,
       frequency: expense.frequency,
+      start_date: expense.start_date,
+      end_date: expense.end_date ?? '',
+      has_end_date: expense.end_date !== null,
     })
     setError(null)
   }
@@ -162,6 +181,43 @@ export default function RecurringPage() {
             ))}
           </select>
         </div>
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label className="block text-xs text-gray-500 mb-1">Start Date</label>
+            <input
+              type="date"
+              value={form.start_date}
+              onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))}
+              aria-label="Start date"
+              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            />
+          </div>
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <label className="text-xs text-gray-500">End Date</label>
+              <label className="flex items-center gap-1 text-xs text-gray-400">
+                <input
+                  type="checkbox"
+                  checked={form.has_end_date}
+                  onChange={e => setForm(f => ({ ...f, has_end_date: e.target.checked, end_date: e.target.checked ? f.end_date : '' }))}
+                  className="rounded border-gray-300"
+                />
+                Set end date
+              </label>
+            </div>
+            {form.has_end_date ? (
+              <input
+                type="date"
+                value={form.end_date}
+                onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))}
+                aria-label="End date"
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+              />
+            ) : (
+              <p className="px-3 py-2 text-sm text-gray-400">No end date (ongoing)</p>
+            )}
+          </div>
+        </div>
         {error && <p className="text-xs text-red-500 mb-3">{error}</p>}
         <div className="flex gap-2">
           <button
@@ -191,6 +247,7 @@ export default function RecurringPage() {
               <th className="pb-2 font-medium">Amount</th>
               <th className="pb-2 font-medium">Category</th>
               <th className="pb-2 font-medium">Frequency</th>
+              <th className="pb-2 font-medium">Date Range</th>
               <th className="pb-2 font-medium"></th>
             </tr>
           </thead>
@@ -201,6 +258,9 @@ export default function RecurringPage() {
                 <td className="py-2 text-gray-700">${exp.amount.toFixed(2)}</td>
                 <td className="py-2 text-gray-700">{exp.category}</td>
                 <td className="py-2 text-gray-700">{FREQUENCY_LABELS[exp.frequency]}</td>
+                <td className="py-2 text-gray-700 text-xs">
+                  {exp.start_date} &mdash; {exp.end_date ?? 'Ongoing'}
+                </td>
                 <td className="py-2 text-right space-x-2">
                   <button
                     onClick={() => startEdit(exp)}
