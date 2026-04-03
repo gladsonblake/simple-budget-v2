@@ -38,18 +38,18 @@ export default function DashboardPage() {
     load()
   }, [])
 
-  const stats: DashboardStats = getSummaryStats(transactions)
   const monthlyTotals: MonthlyTotal[] = getMonthlyTotals(transactions).slice(-12)
 
   const availableMonths: string[] = Array.from(
     new Set(transactions.map(t => t.date.slice(0, 7)))
   ).sort()
 
-  const filteredForCategory = selectedMonth === 'all'
+  const filtered = selectedMonth === 'all'
     ? transactions
     : transactions.filter(t => t.date.startsWith(selectedMonth))
 
-  const categoryTotals: CategoryTotal[] = getCategoryTotals(filteredForCategory, rules).slice(0, 10)
+  const stats: DashboardStats = getSummaryStats(filtered)
+  const categoryTotals: CategoryTotal[] = getCategoryTotals(filtered, rules).slice(0, 10)
 
   return (
     <div className="p-8">
