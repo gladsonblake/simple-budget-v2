@@ -1,5 +1,5 @@
 'use client'
-import { useReducer, useRef, useEffect } from 'react'
+import { useReducer, useRef, useEffect, useState, useCallback } from 'react'
 import { parseCsv } from '@/lib/csv'
 import { applyMapping } from '@/lib/mapping'
 import { detectDuplicates } from '@/lib/duplicates'
@@ -64,19 +64,41 @@ interface Props {
 export default function ImportFlow({ profile, onComplete, onCancel }: Props) {
   const [state, dispatch] = useReducer(reducer, initialState)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [dragging, setDragging] = useState(false)
 
   useEffect(() => {
     getTransactions().then(rows => dispatch({ type: 'SET_EXISTING', rows }))
   }, [])
 
-  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const processFile = useCallback(async (file: File) => {
     const text = await file.text()
     const { headers, rows } = parseCsv(text)
     const { rows: parsed, errors } = applyMapping(headers, rows, profile)
     const duplicates = detectDuplicates(parsed, state.existing)
     dispatch({ type: 'PARSED', rows: parsed, errors, duplicates })
+  }, [profile, state.existing])
+
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    await processFile(file)
+  }
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault()
+    setDragging(false)
+    const file = e.dataTransfer.files[0]
+    if (file) processFile(file)
+  }
+
+  function handleDragOver(e: React.DragEvent) {
+    e.preventDefault()
+    setDragging(true)
+  }
+
+  function handleDragLeave(e: React.DragEvent) {
+    e.preventDefault()
+    setDragging(false)
   }
 
   async function handleConfirm() {
@@ -199,14 +221,33 @@ export default function ImportFlow({ profile, onComplete, onCancel }: Props) {
     <div className="p-8 max-w-xl">
       <h1 className="text-xl font-semibold text-gray-900 mb-1">Upload</h1>
       <p className="text-sm text-gray-500 mb-6">Profile: {profile.name}</p>
-      <input
-        ref={fileRef}
-        type="file"
-        accept=".csv"
-        onChange={handleFileChange}
-        className="block text-sm text-gray-600 mb-6"
-      />
-      <div className="flex gap-3">
+      <div
+        onDrop={handleDrop}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onClick={() => fileRef.current?.click()}
+        className={`flex flex-col items-center justify-center rounded-lg border-2 border-dashed px-6 py-10 cursor-pointer transition-colors ${
+          dragging
+            ? 'border-gray-900 bg-gray-50'
+            : 'border-gray-300 hover:border-gray-400 hover:bg-gray-50'
+        }`}
+      >
+        <svg className="mx-auto h-10 w-10 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5m-13.5-9L12 3m0 0 4.5 4.5M12 3v13.5" />
+        </svg>
+        <p className="text-sm font-medium text-gray-700">
+          Drop your CSV file here, or <span className="text-blue-600">browse</span>
+        </p>
+        <p className="text-xs text-gray-500 mt-1">CSV files only</p>
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".csv"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+      </div>
+      <div className="flex gap-3 mt-6">
         <button
           onClick={onCancel}
           className="px-4 py-2 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
