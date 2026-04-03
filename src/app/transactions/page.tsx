@@ -48,7 +48,7 @@ export default function TransactionsPage() {
       </div>
 
       {showRules && (
-        <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200 max-w-xl">
+        <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200 max-w-2xl">
           <CategoryRulesPanel
             rules={rules}
             categories={categories}

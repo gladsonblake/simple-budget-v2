@@ -9,6 +9,8 @@ vi.mock('@/lib/db', () => ({
 
 const rules: CategoryRule[] = [
   { id: 1, pattern: 'NETFLIX', category: 'Entertainment', priority: 0 },
+  { id: 2, pattern: 'HULU', category: 'Entertainment', priority: 1 },
+  { id: 3, pattern: 'WALMART', category: 'Groceries', priority: 2 },
 ]
 
 const categories: Category[] = [
@@ -21,7 +23,7 @@ const onChange = vi.fn()
 beforeEach(() => { vi.clearAllMocks() })
 
 describe('CategoryRulesPanel', () => {
-  it('renders existing rule patterns', () => {
+  it('renders existing rule patterns as chips grouped by category', () => {
     render(
       <CategoryRulesPanel
         rules={rules}
@@ -29,10 +31,15 @@ describe('CategoryRulesPanel', () => {
         onChange={onChange}
       />
     )
-    expect(screen.getByDisplayValue('NETFLIX')).toBeInTheDocument()
+    expect(screen.getByText('NETFLIX')).toBeInTheDocument()
+    expect(screen.getByText('HULU')).toBeInTheDocument()
+    expect(screen.getByText('WALMART')).toBeInTheDocument()
+    // Category group headers (also appear in the select dropdown)
+    expect(screen.getAllByText('Entertainment').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getAllByText('Groceries').length).toBeGreaterThanOrEqual(1)
   })
 
-  it('renders category as a select (not a free-form input) for each rule', () => {
+  it('renders category select for adding new rules', () => {
     render(
       <CategoryRulesPanel
         rules={rules}
@@ -40,11 +47,27 @@ describe('CategoryRulesPanel', () => {
         onChange={onChange}
       />
     )
+    // The "add new rule" row has a category select
     expect(screen.getByRole('combobox')).toBeInTheDocument()
-    expect(screen.getByDisplayValue('Entertainment')).toBeInTheDocument()
   })
 
-  it('adds a new empty rule when Add Rule is clicked', () => {
+  it('adds a new rule when pattern and category are provided', () => {
+    render(
+      <CategoryRulesPanel
+        rules={[]}
+        categories={categories}
+        onChange={onChange}
+      />
+    )
+    const patternInput = screen.getByPlaceholderText(/pattern/i)
+    fireEvent.change(patternInput, { target: { value: 'DISNEY' } })
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Entertainment' } })
+    fireEvent.click(screen.getByRole('button', { name: /add rule/i }))
+    expect(screen.getByText('DISNEY')).toBeInTheDocument()
+    expect(screen.getAllByText('Entertainment').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('shows rule count', () => {
     render(
       <CategoryRulesPanel
         rules={rules}
@@ -52,9 +75,7 @@ describe('CategoryRulesPanel', () => {
         onChange={onChange}
       />
     )
-    fireEvent.click(screen.getByRole('button', { name: /add rule/i }))
-    const patternInputs = screen.getAllByPlaceholderText(/pattern/i)
-    expect(patternInputs).toHaveLength(2)
+    expect(screen.getByText('(3)')).toBeInTheDocument()
   })
 
   it('calls onChange after saving rules', async () => {
@@ -81,5 +102,16 @@ describe('CategoryRulesPanel', () => {
     )
     expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /rename/i })).not.toBeInTheDocument()
+  })
+
+  it('shows empty state when no rules exist', () => {
+    render(
+      <CategoryRulesPanel
+        rules={[]}
+        categories={categories}
+        onChange={onChange}
+      />
+    )
+    expect(screen.getByText(/no rules yet/i)).toBeInTheDocument()
   })
 })
