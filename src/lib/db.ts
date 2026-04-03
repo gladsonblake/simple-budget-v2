@@ -63,9 +63,18 @@ export async function initDb(): Promise<void> {
       amount REAL NOT NULL,
       category TEXT NOT NULL,
       frequency TEXT NOT NULL,
+      start_date TEXT NOT NULL,
+      end_date TEXT,
       created_at TEXT NOT NULL
     )
   `)
+  // Migration: add start_date and end_date columns if missing
+  try {
+    await db.execute(`ALTER TABLE recurring_expenses ADD COLUMN start_date TEXT NOT NULL DEFAULT '2025-01-01'`)
+  } catch { /* column already exists */ }
+  try {
+    await db.execute(`ALTER TABLE recurring_expenses ADD COLUMN end_date TEXT`)
+  } catch { /* column already exists */ }
 }
 
 export async function getProfiles(): Promise<Profile[]> {
@@ -206,9 +215,9 @@ export async function addRecurringExpense(
   const db = await getDb()
   const now = new Date().toISOString()
   const result = await db.execute(
-    `INSERT INTO recurring_expenses (name, amount, category, frequency, created_at)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [expense.name, expense.amount, expense.category, expense.frequency, now]
+    `INSERT INTO recurring_expenses (name, amount, category, frequency, start_date, end_date, created_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [expense.name, expense.amount, expense.category, expense.frequency, expense.start_date, expense.end_date, now]
   )
   return { id: result.lastInsertId ?? 0, ...expense, created_at: now }
 }
@@ -219,8 +228,8 @@ export async function updateRecurringExpense(
 ): Promise<void> {
   const db = await getDb()
   await db.execute(
-    `UPDATE recurring_expenses SET name = $1, amount = $2, category = $3, frequency = $4 WHERE id = $5`,
-    [expense.name, expense.amount, expense.category, expense.frequency, id]
+    `UPDATE recurring_expenses SET name = $1, amount = $2, category = $3, frequency = $4, start_date = $5, end_date = $6 WHERE id = $7`,
+    [expense.name, expense.amount, expense.category, expense.frequency, expense.start_date, expense.end_date, id]
   )
 }
 

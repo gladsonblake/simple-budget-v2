@@ -59,6 +59,8 @@ export interface RecurringExpense {
   amount: number
   category: string
   frequency: 'weekly' | 'biweekly' | 'monthly' | 'quarterly' | 'yearly'
+  start_date: string
+  end_date: string | null
   created_at: string
 }
 
