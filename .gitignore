@@ -43,6 +43,9 @@ next-env.d.ts
 # worktrees
 .worktrees/
 
+# claude local settings
+.claude/settings.local.json
+
 # Playwright
 tests/e2e/.playwright/
 playwright-report/
