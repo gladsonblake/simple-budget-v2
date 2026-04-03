@@ -135,7 +135,7 @@ export default function DashboardPage() {
                   width={110}
                   tick={{ fontSize: 12 }}
                 />
-                <Tooltip formatter={(v: number) => fmt.format(v)} />
+                <Tooltip formatter={(v) => fmt.format(Number(v))} />
                 <Bar dataKey="total" name="Spending" fill="#6366f1" radius={[0, 4, 4, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -151,7 +151,7 @@ export default function DashboardPage() {
               >
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                 <YAxis tickFormatter={v => `$${(v as number).toFixed(0)}`} tick={{ fontSize: 11 }} />
-                <Tooltip formatter={(v: number) => fmt.format(v)} />
+                <Tooltip formatter={(v) => fmt.format(Number(v))} />
                 <Legend />
                 <Bar dataKey="income" name="Income" fill="#10b981" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="expenses" name="Expenses" fill="#f43f5e" radius={[4, 4, 0, 0]} />
