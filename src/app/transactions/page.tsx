@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { getTransactions, getCategoryRules, getCategories } from '@/lib/db'
-import { effectiveCategory } from '@/lib/rules'
+import { getTransactions, getCategoryRules, getCategories, updateTransactionCategory } from '@/lib/db'
+import { applyRules } from '@/lib/rules'
 import type { Transaction, CategoryRule, Category } from '@/lib/types'
 import CategoryRulesPanel from './CategoryRulesPanel'
 
@@ -10,6 +10,17 @@ export default function TransactionsPage() {
   const [rules, setRules] = useState<CategoryRule[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [showRules, setShowRules] = useState(false)
+  const [savingId, setSavingId] = useState<number | null>(null)
+
+  async function handleCategoryChange(txn: Transaction, category: string) {
+    const newCategory = category === '' ? null : category
+    setSavingId(txn.id)
+    await updateTransactionCategory(txn.id, newCategory)
+    setTransactions(prev =>
+      prev.map(t => t.id === txn.id ? { ...t, category: newCategory } : t)
+    )
+    setSavingId(null)
+  }
 
   async function load() {
     const [txns, rls, cats] = await Promise.all([
@@ -70,8 +81,22 @@ export default function TransactionsPage() {
                     {t.amount.toFixed(2)}
                   </td>
                   <td className="px-4 py-3 text-gray-500 text-xs">{t.transaction_type ?? '—'}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">
-                    {effectiveCategory(t.category, t.description, rules) ?? '—'}
+                  <td className="px-4 py-3">
+                    <select
+                      value={t.category ?? ''}
+                      disabled={savingId === t.id}
+                      onChange={e => handleCategoryChange(t, e.target.value)}
+                      className="w-full rounded border border-gray-200 px-2 py-1 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900 disabled:opacity-50"
+                    >
+                      <option value="">
+                        {applyRules(t.description, rules)
+                          ? `Auto: ${applyRules(t.description, rules)}`
+                          : '— uncategorized —'}
+                      </option>
+                      {categories.map(c => (
+                        <option key={c.id} value={c.name}>{c.name}</option>
+                      ))}
+                    </select>
                   </td>
                   <td className="px-4 py-3 text-gray-400 text-xs max-w-xs truncate">{t.memo ?? '—'}</td>
                 </tr>
