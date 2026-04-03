@@ -67,6 +67,6 @@ jobs:
             - **Windows**: Download and run the `.msi` installer
             - **macOS**: Download the `.dmg` file (Apple Silicon or Intel)
             - **Linux**: Download the `.AppImage` (portable) or `.deb` package
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
