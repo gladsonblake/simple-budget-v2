@@ -11,6 +11,8 @@ export default function TransactionsPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [showRules, setShowRules] = useState(false)
   const [savingId, setSavingId] = useState<number | null>(null)
+  const [selectedMonth, setSelectedMonth] = useState('all')
+  const [selectedCategory, setSelectedCategory] = useState('all')
 
   async function handleCategoryChange(txn: Transaction, category: string) {
     const newCategory = category === '' ? null : category
@@ -34,6 +36,21 @@ export default function TransactionsPage() {
   }
 
   useEffect(() => { load() }, [])
+
+  const availableMonths = Array.from(
+    new Set(transactions.map(t => t.date.slice(0, 7)))
+  ).sort().reverse()
+
+  const availableCategories = Array.from(
+    new Set(transactions.map(t => t.category).filter((c): c is string => c !== null))
+  ).sort()
+
+  const filtered = transactions.filter(t => {
+    if (selectedMonth !== 'all' && !t.date.startsWith(selectedMonth)) return false
+    if (selectedCategory === 'uncategorized') return t.category === null
+    if (selectedCategory !== 'all' && t.category !== selectedCategory) return false
+    return true
+  })
 
   return (
     <div className="p-8">
@@ -60,6 +77,35 @@ export default function TransactionsPage() {
       {transactions.length === 0 ? (
         <p className="text-sm text-gray-400">No transactions yet. Import a CSV to get started.</p>
       ) : (
+        <>
+        <div className="flex items-center gap-3 mb-4">
+          <select
+            value={selectedMonth}
+            onChange={e => setSelectedMonth(e.target.value)}
+            className="rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900"
+          >
+            <option value="all">All months</option>
+            {availableMonths.map(m => (
+              <option key={m} value={m}>{m}</option>
+            ))}
+          </select>
+          <select
+            value={selectedCategory}
+            onChange={e => setSelectedCategory(e.target.value)}
+            className="rounded-md border border-gray-200 px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900"
+          >
+            <option value="all">All categories</option>
+            <option value="uncategorized">Uncategorized</option>
+            {availableCategories.map(c => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </select>
+          {(selectedMonth !== 'all' || selectedCategory !== 'all') && (
+            <span className="text-xs text-gray-400">
+              {filtered.length} of {transactions.length} transactions
+            </span>
+          )}
+        </div>
         <div className="overflow-x-auto rounded-lg border border-gray-200">
           <table className="min-w-full text-sm">
             <thead className="bg-gray-50">
@@ -73,7 +119,7 @@ export default function TransactionsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {transactions.map(t => (
+              {filtered.map(t => (
                 <tr key={t.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{t.date}</td>
                   <td className="px-4 py-3 text-gray-700 max-w-xs truncate">{t.description}</td>
@@ -104,6 +150,7 @@ export default function TransactionsPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   )
