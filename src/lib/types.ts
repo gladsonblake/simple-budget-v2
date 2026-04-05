@@ -7,9 +7,16 @@ export interface ColumnMap {
   category?: string
 }
 
+export interface CategoryGroup {
+  id: number
+  name: string
+}
+
 export interface Category {
   id: number
   name: string
+  group_id: number | null
+  group_name: string | null
 }
 
 export interface Profile {

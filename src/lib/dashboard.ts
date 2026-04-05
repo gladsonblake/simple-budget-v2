@@ -1,4 +1,4 @@
-import type { Transaction, CategoryRule, RecurringExpense } from './types'
+import type { Transaction, CategoryRule, Category, RecurringExpense } from './types'
 import { effectiveCategory } from './rules'
 
 export interface CategoryTotal {
@@ -30,6 +30,28 @@ export function getCategoryTotals(
     if (t.amount <= 0) continue
     const cat = effectiveCategory(t.category, t.description, rules) ?? 'Uncategorized'
     map[cat] = (map[cat] ?? 0) + t.amount
+  }
+  return Object.entries(map)
+    .map(([category, total]) => ({ category, total }))
+    .sort((a, b) => b.total - a.total)
+}
+
+export function getGroupTotals(
+  transactions: Transaction[],
+  rules: CategoryRule[],
+  categories: Category[],
+): CategoryTotal[] {
+  const catToGroup = new Map<string, string>()
+  for (const c of categories) {
+    if (c.group_name) catToGroup.set(c.name, c.group_name)
+  }
+
+  const map: Record<string, number> = {}
+  for (const t of transactions) {
+    if (t.amount <= 0) continue
+    const cat = effectiveCategory(t.category, t.description, rules) ?? 'Uncategorized'
+    const group = catToGroup.get(cat) ?? 'Ungrouped'
+    map[group] = (map[group] ?? 0) + t.amount
   }
   return Object.entries(map)
     .map(([category, total]) => ({ category, total }))

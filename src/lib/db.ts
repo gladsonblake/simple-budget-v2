@@ -1,5 +1,5 @@
 import Database from '@tauri-apps/plugin-sql'
-import type { Profile, Transaction, CategoryRule, Category, RecurringExpense } from './types'
+import type { Profile, Transaction, CategoryRule, Category, CategoryGroup, RecurringExpense } from './types'
 
 let _db: Database | null = null
 
@@ -68,6 +68,16 @@ export async function initDb(): Promise<void> {
       created_at TEXT NOT NULL
     )
   `)
+  await db.execute(`
+    CREATE TABLE IF NOT EXISTS category_groups (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE
+    )
+  `)
+  // Migration: add group_id column to categories if missing
+  try {
+    await db.execute(`ALTER TABLE categories ADD COLUMN group_id INTEGER REFERENCES category_groups(id)`)
+  } catch { /* column already exists */ }
   // Migration: add start_date and end_date columns if missing
   try {
     await db.execute(`ALTER TABLE recurring_expenses ADD COLUMN start_date TEXT NOT NULL DEFAULT '2025-01-01'`)
@@ -179,7 +189,39 @@ export async function updateTransactionCategory(
 
 export async function getCategories(): Promise<Category[]> {
   const db = await getDb()
-  return db.select<Category[]>('SELECT * FROM categories ORDER BY name ASC')
+  return db.select<Category[]>(
+    `SELECT c.id, c.name, c.group_id, cg.name AS group_name
+     FROM categories c
+     LEFT JOIN category_groups cg ON c.group_id = cg.id
+     ORDER BY c.name ASC`
+  )
+}
+
+export async function getCategoryGroups(): Promise<CategoryGroup[]> {
+  const db = await getDb()
+  return db.select<CategoryGroup[]>('SELECT * FROM category_groups ORDER BY name ASC')
+}
+
+export async function addCategoryGroup(name: string): Promise<CategoryGroup> {
+  const db = await getDb()
+  const result = await db.execute('INSERT INTO category_groups (name) VALUES ($1)', [name])
+  return { id: result.lastInsertId ?? 0, name }
+}
+
+export async function renameCategoryGroup(id: number, name: string): Promise<void> {
+  const db = await getDb()
+  await db.execute('UPDATE category_groups SET name = $1 WHERE id = $2', [name, id])
+}
+
+export async function deleteCategoryGroup(id: number): Promise<void> {
+  const db = await getDb()
+  await db.execute('UPDATE categories SET group_id = NULL WHERE group_id = $1', [id])
+  await db.execute('DELETE FROM category_groups WHERE id = $1', [id])
+}
+
+export async function setCategoryGroup(categoryId: number, groupId: number | null): Promise<void> {
+  const db = await getDb()
+  await db.execute('UPDATE categories SET group_id = $1 WHERE id = $2', [groupId, categoryId])
 }
 
 export async function addCategory(name: string): Promise<Category> {

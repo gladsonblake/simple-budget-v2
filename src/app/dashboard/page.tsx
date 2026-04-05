@@ -4,9 +4,9 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
   ResponsiveContainer,
 } from 'recharts'
-import { getTransactions, getCategoryRules, getRecurringExpenses } from '@/lib/db'
-import { getCategoryTotals, getMonthlyTotals, getSummaryStats, generateRecurringTransactions } from '@/lib/dashboard'
-import type { Transaction, CategoryRule, RecurringExpense } from '@/lib/types'
+import { getTransactions, getCategoryRules, getRecurringExpenses, getCategories } from '@/lib/db'
+import { getCategoryTotals, getGroupTotals, getMonthlyTotals, getSummaryStats, generateRecurringTransactions } from '@/lib/dashboard'
+import type { Transaction, CategoryRule, Category, RecurringExpense } from '@/lib/types'
 import type { DashboardStats, CategoryTotal, MonthlyTotal } from '@/lib/dashboard'
 
 const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
@@ -25,20 +25,24 @@ function StatCard({ label, value, highlight }: { label: string; value: string; h
 export default function DashboardPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [rules, setRules] = useState<CategoryRule[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
   const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpense[]>([])
   const [loading, setLoading] = useState(true)
   const [selectedMonth, setSelectedMonth] = useState<string>('all')
   const [includeRecurring, setIncludeRecurring] = useState(true)
+  const [groupByGroup, setGroupByGroup] = useState(false)
 
   useEffect(() => {
     async function load() {
-      const [txns, rls, recurring] = await Promise.all([
+      const [txns, rls, cats, recurring] = await Promise.all([
         getTransactions(),
         getCategoryRules(),
+        getCategories(),
         getRecurringExpenses(),
       ])
       setTransactions(txns)
       setRules(rls)
+      setCategories(cats)
       setRecurringExpenses(recurring)
       setLoading(false)
     }
@@ -65,7 +69,10 @@ export default function DashboardPage() {
     : allTransactions.filter(t => t.date.startsWith(selectedMonth))
 
   const stats: DashboardStats = getSummaryStats(filtered)
-  const categoryTotals: CategoryTotal[] = getCategoryTotals(filtered, rules).slice(0, 10)
+  const hasGroups = categories.some(c => c.group_id !== null)
+  const categoryTotals: CategoryTotal[] = groupByGroup
+    ? getGroupTotals(filtered, rules, categories).slice(0, 10)
+    : getCategoryTotals(filtered, rules).slice(0, 10)
 
   return (
     <div className="p-8">
@@ -105,18 +112,33 @@ export default function DashboardPage() {
           {/* Spending by Category */}
           <div className="bg-white rounded-lg border border-gray-200 p-5">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-gray-700">Spending by Category</h2>
-              <select
-                value={selectedMonth}
-                onChange={e => setSelectedMonth(e.target.value)}
-                className="text-xs border border-gray-200 rounded px-2 py-1 text-gray-600 focus:outline-none focus:ring-1 focus:ring-indigo-400"
-                aria-label="Select month"
-              >
-                <option value="all">All months</option>
-                {availableMonths.map(m => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
+              <h2 className="text-sm font-semibold text-gray-700">
+                {groupByGroup ? 'Spending by Group' : 'Spending by Category'}
+              </h2>
+              <div className="flex items-center gap-3">
+                {hasGroups && (
+                  <label className="flex items-center gap-1.5 text-xs text-gray-600">
+                    <input
+                      type="checkbox"
+                      checked={groupByGroup}
+                      onChange={e => setGroupByGroup(e.target.checked)}
+                      className="rounded border-gray-300"
+                    />
+                    Group by category group
+                  </label>
+                )}
+                <select
+                  value={selectedMonth}
+                  onChange={e => setSelectedMonth(e.target.value)}
+                  className="text-xs border border-gray-200 rounded px-2 py-1 text-gray-600 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  aria-label="Select month"
+                >
+                  <option value="all">All months</option>
+                  {availableMonths.map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <ResponsiveContainer width="100%" height={Math.max(200, categoryTotals.length * 36)}>
               <BarChart

@@ -1,10 +1,15 @@
 'use client'
 import { useState, useEffect } from 'react'
-import { getCategories, addCategory, renameCategory, deleteCategory } from '@/lib/db'
-import type { Category } from '@/lib/types'
+import {
+  getCategories, addCategory, renameCategory, deleteCategory,
+  getCategoryGroups, addCategoryGroup, renameCategoryGroup, deleteCategoryGroup,
+  setCategoryGroup,
+} from '@/lib/db'
+import type { Category, CategoryGroup } from '@/lib/types'
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([])
+  const [groups, setGroups] = useState<CategoryGroup[]>([])
   const [newName, setNewName] = useState('')
   const [addError, setAddError] = useState<string | null>(null)
   const [renameId, setRenameId] = useState<number | null>(null)
@@ -12,8 +17,16 @@ export default function CategoriesPage() {
   const [renameError, setRenameError] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
+  const [newGroupName, setNewGroupName] = useState('')
+  const [groupAddError, setGroupAddError] = useState<string | null>(null)
+  const [renameGroupId, setRenameGroupId] = useState<number | null>(null)
+  const [renameGroupName, setRenameGroupName] = useState('')
+  const [renameGroupError, setRenameGroupError] = useState<string | null>(null)
+
   async function load() {
-    setCategories(await getCategories())
+    const [cats, grps] = await Promise.all([getCategories(), getCategoryGroups()])
+    setCategories(cats)
+    setGroups(grps)
   }
 
   useEffect(() => { load() }, [])
@@ -59,8 +72,44 @@ export default function CategoriesPage() {
     }
   }
 
+  async function handleGroupChange(categoryId: number, groupId: number | null) {
+    await setCategoryGroup(categoryId, groupId)
+    await load()
+  }
+
+  async function handleAddGroup() {
+    const trimmed = newGroupName.trim()
+    if (!trimmed) return
+    setGroupAddError(null)
+    try {
+      await addCategoryGroup(trimmed)
+      setNewGroupName('')
+      await load()
+    } catch {
+      setGroupAddError('Group already exists')
+    }
+  }
+
+  async function handleRenameGroupConfirm(id: number) {
+    const trimmed = renameGroupName.trim()
+    if (!trimmed) return
+    setRenameGroupError(null)
+    try {
+      await renameCategoryGroup(id, trimmed)
+      setRenameGroupId(null)
+      await load()
+    } catch {
+      setRenameGroupError('Failed to rename group')
+    }
+  }
+
+  async function handleDeleteGroup(id: number) {
+    await deleteCategoryGroup(id)
+    await load()
+  }
+
   return (
-    <div className="p-8 max-w-xl">
+    <div className="p-8 max-w-2xl">
       <h1 className="text-xl font-semibold text-gray-900 mb-6">Categories</h1>
 
       <div className="flex items-center gap-2 mb-2">
@@ -118,7 +167,18 @@ export default function CategoriesPage() {
               </>
             ) : (
               <>
-                <span className="flex-1 text-sm text-gray-700">{cat.name}</span>
+                <span className="w-40 truncate text-sm text-gray-700">{cat.name}</span>
+                <select
+                  value={cat.group_id ?? ''}
+                  onChange={e => handleGroupChange(cat.id, e.target.value ? Number(e.target.value) : null)}
+                  aria-label={`Group for ${cat.name}`}
+                  className="text-xs border border-gray-200 rounded px-2 py-1 text-gray-600 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                >
+                  <option value="">No group</option>
+                  {groups.map(g => (
+                    <option key={g.id} value={g.id}>{g.name}</option>
+                  ))}
+                </select>
                 <button
                   onClick={() => { setRenameId(cat.id); setRenameName(cat.name); setDeleteError(null) }}
                   aria-label={`Rename ${cat.name}`}
@@ -129,6 +189,86 @@ export default function CategoriesPage() {
                 <button
                   onClick={() => handleDelete(cat.id)}
                   aria-label={`Delete ${cat.name}`}
+                  className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  Delete
+                </button>
+              </>
+            )}
+          </li>
+        ))}
+      </ul>
+
+      {/* Category Groups Section */}
+      <h2 className="text-lg font-semibold text-gray-900 mt-10 mb-4">Category Groups</h2>
+
+      <div className="flex items-center gap-2 mb-2">
+        <input
+          type="text"
+          value={newGroupName}
+          onChange={e => setNewGroupName(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') handleAddGroup() }}
+          placeholder="New group name"
+          aria-label="New group name"
+          className="flex-1 rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+        />
+        <button
+          onClick={handleAddGroup}
+          className="px-3 py-2 text-sm font-medium text-white bg-gray-900 rounded-md hover:bg-gray-700 transition-colors"
+        >
+          Add
+        </button>
+      </div>
+      {groupAddError && <p className="text-xs text-red-500 mb-4">{groupAddError}</p>}
+
+      {groups.length === 0 && (
+        <p className="text-sm text-gray-400 mt-4">No groups yet. Add one above, then assign categories to it.</p>
+      )}
+
+      <ul className="space-y-1 mt-4">
+        {groups.map(g => (
+          <li key={g.id} className="flex items-center gap-2">
+            {renameGroupId === g.id ? (
+              <>
+                <input
+                  type="text"
+                  value={renameGroupName}
+                  onChange={e => setRenameGroupName(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleRenameGroupConfirm(g.id) }}
+                  autoFocus
+                  aria-label="Rename group"
+                  className="flex-1 rounded-md border border-gray-200 px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+                />
+                <button
+                  onClick={() => handleRenameGroupConfirm(g.id)}
+                  className="text-xs font-medium text-white bg-gray-900 px-2 py-1 rounded-md hover:bg-gray-700 transition-colors"
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => { setRenameGroupId(null); setRenameGroupError(null) }}
+                  className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+                >
+                  ✕
+                </button>
+                {renameGroupError && <p className="text-xs text-red-500">{renameGroupError}</p>}
+              </>
+            ) : (
+              <>
+                <span className="flex-1 text-sm text-gray-700">{g.name}</span>
+                <span className="text-xs text-gray-400">
+                  {categories.filter(c => c.group_id === g.id).length} categories
+                </span>
+                <button
+                  onClick={() => { setRenameGroupId(g.id); setRenameGroupName(g.name) }}
+                  aria-label={`Rename ${g.name}`}
+                  className="text-xs text-gray-400 hover:text-gray-700 transition-colors"
+                >
+                  Rename
+                </button>
+                <button
+                  onClick={() => handleDeleteGroup(g.id)}
+                  aria-label={`Delete ${g.name}`}
                   className="text-xs text-gray-400 hover:text-red-500 transition-colors"
                 >
                   Delete
