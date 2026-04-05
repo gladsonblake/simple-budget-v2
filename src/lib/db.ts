@@ -238,6 +238,17 @@ export async function deleteRecurringExpense(id: number): Promise<void> {
   await db.execute('DELETE FROM recurring_expenses WHERE id = $1', [id])
 }
 
+export async function getOrCreateCategory(name: string): Promise<Category> {
+  const db = await getDb()
+  const existing = await db.select<Category[]>(
+    'SELECT * FROM categories WHERE name = $1',
+    [name]
+  )
+  if (existing.length > 0) return existing[0]
+  const result = await db.execute('INSERT INTO categories (name) VALUES ($1)', [name])
+  return { id: result.lastInsertId ?? 0, name }
+}
+
 export async function deleteCategory(id: number): Promise<{ error?: string }> {
   const db = await getDb()
   const rows = await db.select<Array<{ name: string }>>(

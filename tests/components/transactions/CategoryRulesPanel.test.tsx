@@ -34,12 +34,12 @@ describe('CategoryRulesPanel', () => {
     expect(screen.getByText('NETFLIX')).toBeInTheDocument()
     expect(screen.getByText('HULU')).toBeInTheDocument()
     expect(screen.getByText('WALMART')).toBeInTheDocument()
-    // Category group headers (also appear in the select dropdown)
+    // Category group headers
     expect(screen.getAllByText('Entertainment').length).toBeGreaterThanOrEqual(1)
     expect(screen.getAllByText('Groceries').length).toBeGreaterThanOrEqual(1)
   })
 
-  it('renders category select for adding new rules', () => {
+  it('renders category select button for adding new rules', () => {
     render(
       <CategoryRulesPanel
         rules={rules}
@@ -47,8 +47,8 @@ describe('CategoryRulesPanel', () => {
         onChange={onChange}
       />
     )
-    // The "add new rule" row has a category select
-    expect(screen.getByRole('combobox')).toBeInTheDocument()
+    // The "add new rule" row has a category select button
+    expect(screen.getByRole('button', { name: /uncategorized/ })).toBeInTheDocument()
   })
 
   it('adds a new rule when pattern and category are provided', () => {
@@ -61,7 +61,9 @@ describe('CategoryRulesPanel', () => {
     )
     const patternInput = screen.getByPlaceholderText(/pattern/i)
     fireEvent.change(patternInput, { target: { value: 'DISNEY' } })
-    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'Entertainment' } })
+    // Open the category combobox and select a category
+    fireEvent.click(screen.getByRole('button', { name: /uncategorized/ }))
+    fireEvent.click(screen.getByText('Entertainment'))
     fireEvent.click(screen.getByRole('button', { name: /add rule/i }))
     expect(screen.getByText('DISNEY')).toBeInTheDocument()
     expect(screen.getAllByText('Entertainment').length).toBeGreaterThanOrEqual(1)
