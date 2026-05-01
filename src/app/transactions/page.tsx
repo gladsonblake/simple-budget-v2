@@ -5,12 +5,37 @@ import { applyRules } from '@/lib/rules'
 import type { Transaction, CategoryRule, Category } from '@/lib/types'
 import CategoryRulesPanel from './CategoryRulesPanel'
 
+function getCurrentMonthValue() {
+  return new Date().toISOString().slice(0, 7)
+}
+
+function getMonthValue(date: string) {
+  return date.slice(0, 7)
+}
+
+function formatMonthLabel(month: string) {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${month}-01T00:00:00.000Z`))
+}
+
 export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<Transaction[]>([])
   const [rules, setRules] = useState<CategoryRule[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [showRules, setShowRules] = useState(false)
   const [savingId, setSavingId] = useState<number | null>(null)
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthValue)
+
+  const monthOptions = Array.from(
+    new Set([getCurrentMonthValue(), ...transactions.map(t => getMonthValue(t.date))])
+  ).sort((a, b) => b.localeCompare(a))
+
+  const filteredTransactions = transactions.filter(
+    transaction => getMonthValue(transaction.date) === selectedMonth
+  )
 
   async function handleCategoryChange(txn: Transaction, category: string) {
     const newCategory = category === '' ? null : category
@@ -39,12 +64,30 @@ export default function TransactionsPage() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold text-gray-900">Transactions</h1>
-        <button
-          onClick={() => setShowRules(r => !r)}
-          className="px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          {showRules ? 'Hide Rules' : 'Category Rules'}
-        </button>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-gray-600">
+            <span>Month</span>
+            <select
+              aria-label="Month"
+              value={selectedMonth}
+              onChange={e => setSelectedMonth(e.target.value)}
+              className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-900"
+            >
+              {monthOptions.map(month => (
+                <option key={month} value={month}>
+                  {formatMonthLabel(month)}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <button
+            onClick={() => setShowRules(r => !r)}
+            className="px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            {showRules ? 'Hide Rules' : 'Category Rules'}
+          </button>
+        </div>
       </div>
 
       {showRules && (
@@ -59,6 +102,8 @@ export default function TransactionsPage() {
 
       {transactions.length === 0 ? (
         <p className="text-sm text-gray-400">No transactions yet. Import a CSV to get started.</p>
+      ) : filteredTransactions.length === 0 ? (
+        <p className="text-sm text-gray-400">No transactions for {formatMonthLabel(selectedMonth)}.</p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-gray-200">
           <table className="min-w-full text-sm">
@@ -73,7 +118,7 @@ export default function TransactionsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {transactions.map(t => (
+              {filteredTransactions.map(t => (
                 <tr key={t.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 text-gray-700 whitespace-nowrap">{t.date}</td>
                   <td className="px-4 py-3 text-gray-700 max-w-xs truncate">{t.description}</td>
