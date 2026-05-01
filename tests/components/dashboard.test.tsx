@@ -1,15 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '../utils'
+import { render, screen, waitFor, within } from '../utils'
+import userEvent from '@testing-library/user-event'
 import React from 'react'
 import DashboardPage from '@/app/dashboard/page'
 import type { Transaction } from '@/lib/types'
 
 vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  BarChart: ({ children }: { children: React.ReactNode }) => (
-    <div role="img" aria-label="bar chart">{children}</div>
+  BarChart: ({ children, data }: { children: React.ReactNode; data?: unknown }) => (
+    <div role="img" aria-label="bar chart">
+      <output data-testid="chart-data">{JSON.stringify(data ?? null)}</output>
+      {children}
+    </div>
   ),
-  Bar: () => null,
+  Bar: ({ name, dataKey }: { name?: string; dataKey?: string }) => (
+    <span data-testid="chart-series">{`${name ?? 'Series'}:${String(dataKey ?? '')}`}</span>
+  ),
   XAxis: () => null,
   YAxis: () => null,
   Tooltip: () => null,
@@ -135,5 +141,63 @@ describe('DashboardPage', () => {
     await waitFor(() => {
       expect(screen.getByText('3')).toBeInTheDocument()
     })
+  })
+
+  it('allows choosing which monthly trend series to show', async () => {
+    vi.mocked(getTransactions).mockResolvedValue([
+      makeTx({ id: 1, date: '2025-01-10', amount: 100, category: 'Food' }),
+      makeTx({ id: 2, date: '2025-01-20', amount: -2000, category: 'Salary' }),
+    ])
+
+    const user = userEvent.setup()
+    render(<DashboardPage />)
+
+    const monthlyTrend = (await screen.findByText('Monthly Trend')).closest('div.bg-white.rounded-lg.border.border-gray-200.p-5')
+    expect(monthlyTrend).not.toBeNull()
+
+    const seriesSelect = await screen.findByRole('combobox', { name: 'Select monthly trend series' })
+    expect(within(monthlyTrend as HTMLElement).getAllByTestId('chart-series').map(node => node.textContent)).toEqual([
+      'Income:income',
+      'Expenses:expenses',
+    ])
+
+    await user.selectOptions(seriesSelect, 'expenses')
+    expect(within(monthlyTrend as HTMLElement).getAllByTestId('chart-series').map(node => node.textContent)).toEqual([
+      'Expenses:expenses',
+    ])
+
+    await user.selectOptions(seriesSelect, 'income')
+    expect(within(monthlyTrend as HTMLElement).getAllByTestId('chart-series').map(node => node.textContent)).toEqual([
+      'Income:income',
+    ])
+  })
+
+  it('filters monthly trend data by category', async () => {
+    vi.mocked(getTransactions).mockResolvedValue([
+      makeTx({ id: 1, date: '2025-01-10', amount: 100, category: 'Food' }),
+      makeTx({ id: 2, date: '2025-01-12', amount: 80, category: 'Transport' }),
+      makeTx({ id: 3, date: '2025-01-20', amount: -2000, category: 'Salary' }),
+      makeTx({ id: 4, date: '2025-02-01', amount: 40, category: 'Food' }),
+    ])
+
+    const user = userEvent.setup()
+    render(<DashboardPage />)
+
+    const categorySelect = await screen.findByRole('combobox', { name: 'Filter monthly trend by category' })
+    expect(screen.getByRole('option', { name: 'All categories' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Food' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Salary' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Transport' })).toBeInTheDocument()
+
+    await user.selectOptions(categorySelect, 'Food')
+
+    const monthlyTrend = screen.getByText('Monthly Trend').closest('div.bg-white.rounded-lg.border.border-gray-200.p-5')
+    expect(monthlyTrend).not.toBeNull()
+
+    const chartData = within(monthlyTrend as HTMLElement).getByTestId('chart-data')
+    expect(chartData.textContent).toContain('"expenses":100')
+    expect(chartData.textContent).toContain('"expenses":40')
+    expect(chartData.textContent).not.toContain('"income":2000')
+    expect(chartData.textContent).not.toContain('"expenses":80')
   })
 })
