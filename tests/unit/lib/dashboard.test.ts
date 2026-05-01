@@ -104,6 +104,25 @@ describe('getMonthlyTotals', () => {
     const result = getMonthlyTotals(transactions)
     expect(result[0].month).toBe('Jun 2025')
   })
+
+  it('filters monthly totals by effective category when requested', () => {
+    const transactions = [
+      tx({ id: 1, date: '2025-01-10', amount: 100, category: 'Food' }),
+      tx({ id: 2, date: '2025-01-20', amount: -500, category: 'Salary' }),
+      tx({ id: 3, date: '2025-02-05', amount: 200, category: null, description: 'Grocery store' }),
+      tx({ id: 4, date: '2025-02-10', amount: 75, category: 'Transport' }),
+    ]
+    const rules: CategoryRule[] = [
+      { id: 1, pattern: 'grocery', category: 'Food', priority: 0 },
+    ]
+
+    const result = getMonthlyTotals(transactions, rules, { category: 'Food' })
+
+    expect(result).toEqual([
+      { month: 'Jan 2025', expenses: 100, income: 0 },
+      { month: 'Feb 2025', expenses: 200, income: 0 },
+    ])
+  })
 })
 
 describe('getSummaryStats', () => {
