@@ -5,7 +5,13 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { getTransactions, getCategoryRules, getRecurringExpenses } from '@/lib/db'
-import { getCategoryTotals, getMonthlyTotals, getSummaryStats, generateRecurringTransactions } from '@/lib/dashboard'
+import {
+  getAvailableCategories,
+  getCategoryTotals,
+  getMonthlyTotals,
+  getSummaryStats,
+  generateRecurringTransactions,
+} from '@/lib/dashboard'
 import type { Transaction, CategoryRule, RecurringExpense } from '@/lib/types'
 import type { DashboardStats, CategoryTotal, MonthlyTotal } from '@/lib/dashboard'
 
@@ -29,6 +35,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [selectedMonth, setSelectedMonth] = useState<string>('all')
   const [includeRecurring, setIncludeRecurring] = useState(true)
+  const [trendSeries, setTrendSeries] = useState<'both' | 'expenses' | 'income'>('both')
+  const [selectedTrendCategory, setSelectedTrendCategory] = useState<string>('all')
 
   useEffect(() => {
     async function load() {
@@ -54,11 +62,11 @@ export default function DashboardPage() {
 
   const allTransactions = [...transactions, ...recurringTxns]
 
-  const monthlyTotals: MonthlyTotal[] = getMonthlyTotals(allTransactions).slice(-12)
-
   const availableMonths: string[] = Array.from(
     new Set(allTransactions.map(t => t.date.slice(0, 7)))
   ).sort()
+
+  const availableTrendCategories = getAvailableCategories(allTransactions, rules)
 
   const filtered = selectedMonth === 'all'
     ? allTransactions
@@ -66,6 +74,11 @@ export default function DashboardPage() {
 
   const stats: DashboardStats = getSummaryStats(filtered)
   const categoryTotals: CategoryTotal[] = getCategoryTotals(filtered, rules).slice(0, 10)
+  const monthlyTotals: MonthlyTotal[] = getMonthlyTotals(
+    allTransactions,
+    rules,
+    selectedTrendCategory === 'all' ? {} : { category: selectedTrendCategory },
+  ).slice(-12)
 
   return (
     <div className="p-8">
@@ -143,7 +156,32 @@ export default function DashboardPage() {
 
           {/* Monthly Trend */}
           <div className="bg-white rounded-lg border border-gray-200 p-5">
-            <h2 className="text-sm font-semibold text-gray-700 mb-4">Monthly Trend</h2>
+            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <h2 className="text-sm font-semibold text-gray-700">Monthly Trend</h2>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <select
+                  value={trendSeries}
+                  onChange={e => setTrendSeries(e.target.value as 'both' | 'expenses' | 'income')}
+                  className="text-xs border border-gray-200 rounded px-2 py-1 text-gray-600 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  aria-label="Select monthly trend series"
+                >
+                  <option value="both">Expenses and income</option>
+                  <option value="expenses">Expenses only</option>
+                  <option value="income">Income only</option>
+                </select>
+                <select
+                  value={selectedTrendCategory}
+                  onChange={e => setSelectedTrendCategory(e.target.value)}
+                  className="text-xs border border-gray-200 rounded px-2 py-1 text-gray-600 focus:outline-none focus:ring-1 focus:ring-indigo-400"
+                  aria-label="Filter monthly trend by category"
+                >
+                  <option value="all">All categories</option>
+                  {availableTrendCategories.map(category => (
+                    <option key={category} value={category}>{category}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
             <ResponsiveContainer width="100%" height={260}>
               <BarChart
                 data={monthlyTotals}
@@ -153,8 +191,12 @@ export default function DashboardPage() {
                 <YAxis tickFormatter={v => `$${(v as number).toFixed(0)}`} tick={{ fontSize: 11 }} />
                 <Tooltip formatter={(v) => fmt.format(Number(v))} />
                 <Legend />
-                <Bar dataKey="income" name="Income" fill="#10b981" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="expenses" name="Expenses" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                {(trendSeries === 'both' || trendSeries === 'income') && (
+                  <Bar dataKey="income" name="Income" fill="#10b981" radius={[4, 4, 0, 0]} />
+                )}
+                {(trendSeries === 'both' || trendSeries === 'expenses') && (
+                  <Bar dataKey="expenses" name="Expenses" fill="#f43f5e" radius={[4, 4, 0, 0]} />
+                )}
               </BarChart>
             </ResponsiveContainer>
           </div>

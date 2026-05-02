@@ -12,6 +12,10 @@ export interface MonthlyTotal {
   income: number
 }
 
+export interface MonthlyTotalsOptions {
+  category?: string
+}
+
 export interface DashboardStats {
   totalExpenses: number
   totalIncome: number
@@ -20,6 +24,13 @@ export interface DashboardStats {
 }
 
 const MONTH_LABELS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+export function getTransactionCategory(
+  transaction: Transaction,
+  rules: CategoryRule[],
+): string {
+  return effectiveCategory(transaction.category, transaction.description, rules) ?? 'Uncategorized'
+}
 
 export function getCategoryTotals(
   transactions: Transaction[],
@@ -36,9 +47,16 @@ export function getCategoryTotals(
     .sort((a, b) => b.total - a.total)
 }
 
-export function getMonthlyTotals(transactions: Transaction[]): MonthlyTotal[] {
+export function getMonthlyTotals(
+  transactions: Transaction[],
+  rules: CategoryRule[] = [],
+  options: MonthlyTotalsOptions = {},
+): MonthlyTotal[] {
   const map: Record<string, { expenses: number; income: number }> = {}
   for (const t of transactions) {
+    const category = getTransactionCategory(t, rules)
+    if (options.category && category !== options.category) continue
+
     const [year, month] = t.date.split('-')
     const key = `${year}-${month}`
     if (!map[key]) map[key] = { expenses: 0, income: 0 }
@@ -55,6 +73,14 @@ export function getMonthlyTotals(transactions: Transaction[]): MonthlyTotal[] {
       const label = `${MONTH_LABELS[Number(month) - 1]} ${year}`
       return { month: label, expenses, income }
     })
+}
+
+export function getAvailableCategories(
+  transactions: Transaction[],
+  rules: CategoryRule[],
+): string[] {
+  return Array.from(new Set(transactions.map(transaction => getTransactionCategory(transaction, rules))))
+    .sort((a, b) => a.localeCompare(b))
 }
 
 export function getSummaryStats(transactions: Transaction[]): DashboardStats {
