@@ -64,12 +64,6 @@ export default function TransactionsPage() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold text-gray-900">Transactions</h1>
-        <button
-          onClick={() => setShowRules(true)}
-          className="px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          Category Rules
-        </button>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 text-sm text-gray-600">
             <span>Month</span>
@@ -88,10 +82,10 @@ export default function TransactionsPage() {
           </label>
 
           <button
-            onClick={() => setShowRules(r => !r)}
+            onClick={() => setShowRules(true)}
             className="px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            {showRules ? 'Hide Rules' : 'Category Rules'}
+            Category Rules
           </button>
         </div>
       </div>
