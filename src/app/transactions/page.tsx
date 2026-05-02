@@ -40,20 +40,44 @@ export default function TransactionsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-semibold text-gray-900">Transactions</h1>
         <button
-          onClick={() => setShowRules(r => !r)}
+          onClick={() => setShowRules(true)}
           className="px-3 py-1.5 text-sm font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
         >
-          {showRules ? 'Hide Rules' : 'Category Rules'}
+          Category Rules
         </button>
       </div>
 
       {showRules && (
-        <div className="mb-6 p-4 bg-white rounded-lg border border-gray-200 max-w-2xl">
-          <CategoryRulesPanel
-            rules={rules}
-            categories={categories}
-            onChange={load}
-          />
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-gray-900/40 p-4"
+          onClick={() => setShowRules(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="category-rules-dialog-title"
+            className="w-full max-w-3xl rounded-xl bg-white p-5 shadow-xl"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="mb-4 flex items-center justify-between">
+              <h2 id="category-rules-dialog-title" className="text-lg font-semibold text-gray-900">
+                Category Rules
+              </h2>
+              <button
+                onClick={() => setShowRules(false)}
+                aria-label="Close category rules"
+                className="rounded-md px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+              >
+                Close
+              </button>
+            </div>
+
+            <CategoryRulesPanel
+              rules={rules}
+              categories={categories}
+              onChange={load}
+            />
+          </div>
         </div>
       )}
 
