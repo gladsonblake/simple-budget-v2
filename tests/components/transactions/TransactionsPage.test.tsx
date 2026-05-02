@@ -1,55 +1,3 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent } from '../../utils'
-import TransactionsPage from '@/app/transactions/page'
-
-vi.mock('@/lib/db', () => ({
-  getTransactions: vi.fn().mockResolvedValue([
-    {
-      id: 1,
-      date: '2026-05-01',
-      description: 'NETFLIX',
-      amount: 19.99,
-      transaction_type: 'card',
-      memo: null,
-      category: 'Entertainment',
-      notes: null,
-      extra_data: null,
-      imported_at: '2026-05-01T00:00:00.000Z',
-      profile_id: 1,
-    },
-  ]),
-  getCategoryRules: vi.fn().mockResolvedValue([
-    { id: 1, pattern: 'NETFLIX', category: 'Entertainment', priority: 0 },
-  ]),
-  getCategories: vi.fn().mockResolvedValue([
-    { id: 1, name: 'Entertainment' },
-    { id: 2, name: 'Groceries' },
-  ]),
-  updateTransactionCategory: vi.fn().mockResolvedValue(undefined),
-}))
-
-beforeEach(() => {
-  vi.clearAllMocks()
-})
-
-describe('TransactionsPage', () => {
-  it('opens category rules in a modal', async () => {
-    render(<TransactionsPage />)
-
-    await screen.findByText('NETFLIX')
-    fireEvent.click(screen.getByRole('button', { name: /category rules/i }))
-
-    expect(screen.getByRole('dialog', { name: /category rules/i })).toBeInTheDocument()
-  })
-
-  it('closes the category rules modal', async () => {
-    render(<TransactionsPage />)
-
-    await screen.findByText('NETFLIX')
-    fireEvent.click(screen.getByRole('button', { name: /category rules/i }))
-    fireEvent.click(screen.getByRole('button', { name: /close category rules/i }))
-
-    expect(screen.queryByRole('dialog', { name: /category rules/i })).not.toBeInTheDocument()
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, screen, waitFor } from '../../utils'
 import TransactionsPage from '@/app/transactions/page'
@@ -63,7 +11,7 @@ vi.mock('@/lib/db', () => ({
   getTransactions: vi.fn(),
   getCategoryRules: vi.fn(),
   getCategories: vi.fn(),
-  updateTransactionCategory: vi.fn(),
+  updateTransactionCategory: vi.fn().mockResolvedValue(undefined),
 }))
 
 const transactions: Transaction[] = [
@@ -108,7 +56,10 @@ const transactions: Transaction[] = [
   },
 ]
 
-const rules: CategoryRule[] = []
+const rules: CategoryRule[] = [
+  { id: 1, pattern: 'Coffee', category: 'Dining', priority: 0 },
+]
+
 const categories: Category[] = [
   { id: 1, name: 'Dining' },
   { id: 2, name: 'Income' },
@@ -129,6 +80,29 @@ describe('TransactionsPage', () => {
 
   afterEach(() => {
     vi.useRealTimers()
+  })
+
+  it('renders a single category rules button and keeps its label when opening the modal', async () => {
+    render(<TransactionsPage />)
+
+    await screen.findByText('Coffee Shop')
+
+    expect(screen.getAllByRole('button', { name: /category rules/i })).toHaveLength(1)
+
+    fireEvent.click(screen.getByRole('button', { name: /category rules/i }))
+
+    expect(screen.getByRole('dialog', { name: /category rules/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /hide rules/i })).not.toBeInTheDocument()
+  })
+
+  it('closes the category rules modal', async () => {
+    render(<TransactionsPage />)
+
+    await screen.findByText('Coffee Shop')
+    fireEvent.click(screen.getByRole('button', { name: /category rules/i }))
+    fireEvent.click(screen.getByRole('button', { name: /close category rules/i }))
+
+    expect(screen.queryByRole('dialog', { name: /category rules/i })).not.toBeInTheDocument()
   })
 
   it('defaults the month filter to the current month', async () => {
